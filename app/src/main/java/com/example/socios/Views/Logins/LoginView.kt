@@ -82,7 +82,7 @@ fun LoginViewContent(navController: NavController) {
             is MainViewModel.UserCreationResult.Error -> {
                 Toast.makeText(
                     context,
-                    "Error al iniciar sesión: ${result.message}",
+                    "${result.message}",
                     Toast.LENGTH_LONG
                 ).show()
             }

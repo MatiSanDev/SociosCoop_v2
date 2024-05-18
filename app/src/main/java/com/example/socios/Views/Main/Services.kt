@@ -13,6 +13,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,7 +43,6 @@ import com.example.socios.R
 import com.example.socios.Views.Logins.MainViewModel
 import com.example.socios.modelo.Producto
 import retrofit2.Response
-
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun ServicesView(navController: NavController, mainViewModel: MainViewModel) {
@@ -57,7 +57,6 @@ fun ServicesView(navController: NavController, mainViewModel: MainViewModel) {
         ContentServicesView(navController, mainViewModel)
     }
 }
-
 @Composable
 fun ContentServicesView(navController: NavController, mainViewModel: MainViewModel) {
     var codigo by remember { mutableStateOf(TextFieldValue("")) }
@@ -116,18 +115,20 @@ fun ContentServicesView(navController: NavController, mainViewModel: MainViewMod
                         mensaje = "Por favor, complete todos los campos."
                     } else {
                         val producto = Producto(
-                            p_codigo = codigo.text,
-                            p_nombre = nombre.text,
-                            p_descripcion = descripcion.text,
-                            p_precio = precio.text.toDoubleOrNull() ?: 0.0,
-                            p_mail_creado = mail.text
+                            codigo = codigo.text,
+                            nombre = nombre.text,
+                            descripcion = descripcion.text,
+                            precio = precio.text.toDoubleOrNull() ?: 0.0,
+                            mail = mail.text
                         )
                         mainViewModel.crearProducto(producto) { response ->
                             if (response.isSuccessful) {
                                 mensaje = "Producto creado exitosamente"
+                                println("MSV Producto Mensaje: $mensaje")
                             } else {
                                 mensaje = "Error al crear producto: ${response.message()}"
                             }
+                            println("MSV Producto Mensaje: $mensaje")
                         }
                     }
                 }) {
@@ -139,6 +140,7 @@ fun ContentServicesView(navController: NavController, mainViewModel: MainViewMod
         }
     }
 }
+
 
 
 

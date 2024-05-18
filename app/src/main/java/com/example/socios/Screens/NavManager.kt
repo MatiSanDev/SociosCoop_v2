@@ -2,12 +2,14 @@ package com.example.socios.Screens
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.socios.Components.generateDummyMessages
 import com.example.socios.Views.Logins.ForgotView
 import com.example.socios.Views.Logins.LoginView
+import com.example.socios.Views.Logins.MainViewModel
 import com.example.socios.Views.Logins.RegisterView
 import com.example.socios.Views.Main.HomeView
 import com.example.socios.Views.Main.ProfileView
@@ -65,7 +67,8 @@ fun NavManager() {
             ProfileView(navController)
         }
         composable("Services") {
-            ServicesView(navController)
+            ServicesView(navController, mainViewModel = viewModel())
         }
+
     }
 }

@@ -32,6 +32,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.socios.modelo.Producto
 import com.example.socios.modelo.Usuario
 import com.example.socios.modelo.UsuarioLogin
 import com.example.socios.util.RetrofitInstance
@@ -39,16 +40,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import retrofit2.Response
 
 class MainViewModel : ViewModel() {
     val isLoading = mutableStateOf(false)
     private val _userCreationResult = MutableStateFlow<UserCreationResult?>(null)
     val userCreationResult = _userCreationResult.asStateFlow()
 
-    fun createUser(mail: String, pass: String, nombre: String, apellido: String) {
-        var usuario: Usuario
-        usuario = Usuario(mail, pass, nombre, apellido)
+    private val _productCreationResult = MutableStateFlow<ProductCreationResult?>(null)
+    val productCreationResult = _productCreationResult.asStateFlow()
 
+    fun createUser(mail: String, pass: String, nombre: String, apellido: String) {
+        val usuario = Usuario(mail, pass, nombre, apellido)
 
         viewModelScope.launch {
             isLoading.value = true
@@ -65,7 +68,6 @@ class MainViewModel : ViewModel() {
 
     fun usuarioLogin(mail: String, pass: String) {
         val usuarioLogin = UsuarioLogin(mail, pass)
-
 
         viewModelScope.launch {
             isLoading.value = true
@@ -84,11 +86,26 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun crearProducto(producto: Producto, onResult: (Response<String>) -> Unit) {
+        viewModelScope.launch {
+            isLoading.value = true
+            val response = RetrofitInstance.api.crearProducto(producto)
+            onResult(response)
+            isLoading.value = false
+        }
+    }
+
+
     fun resetUserCreationResult() {
         viewModelScope.launch {
             delay(1000)
             _userCreationResult.value = null
         }
+    }
+
+    sealed class ProductCreationResult {
+        data class Success(val message: String): ProductCreationResult()
+        data class Error(val message: String): ProductCreationResult()
     }
 
     sealed class UserCreationResult {
@@ -97,9 +114,10 @@ class MainViewModel : ViewModel() {
     }
 }
 @Composable
-fun RegisterView(navController: NavController){
+fun RegisterView(navController: NavController) {
     ContentRegisterView(navController)
 }
+
 @Composable
 fun ContentRegisterView(navController: NavController) {
     var mail by remember { mutableStateOf("") }

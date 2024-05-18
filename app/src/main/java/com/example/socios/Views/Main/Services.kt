@@ -1,35 +1,35 @@
 package com.example.socios.Views.Main
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.socios.Components.CustomIcon
@@ -39,10 +39,13 @@ import com.example.socios.Components.MyBottomAppBar
 import com.example.socios.Components.MyTopAppBar
 import com.example.socios.Components.TitleView
 import com.example.socios.R
+import com.example.socios.Views.Logins.MainViewModel
+import com.example.socios.modelo.Producto
+import retrofit2.Response
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun ServicesView(navController: NavController) {
+fun ServicesView(navController: NavController, mainViewModel: MainViewModel) {
     Scaffold(
         topBar = {
             MyTopAppBar(navController)
@@ -51,34 +54,95 @@ fun ServicesView(navController: NavController) {
             MyBottomAppBar(navController)
         }
     ) {
-        ContentServicesView(navController)
+        ContentServicesView(navController, mainViewModel)
     }
 }
 
-
 @Composable
-fun ContentServicesView(navController: NavController) {
+fun ContentServicesView(navController: NavController, mainViewModel: MainViewModel) {
+    var codigo by remember { mutableStateOf(TextFieldValue("")) }
+    var nombre by remember { mutableStateOf(TextFieldValue("")) }
+    var descripcion by remember { mutableStateOf(TextFieldValue("")) }
+    var precio by remember { mutableStateOf(TextFieldValue("")) }
+    var mail by remember { mutableStateOf(TextFieldValue("")) }
+    var mensaje by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(vertical = 73.dp),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally)
-    {
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         item {
-            CustomTextBox(
-                text = "Productos que podrás contratar: ",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Light,
-                fontFamily = FontFamily.Default,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(0.dp)
-            )
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                OutlinedTextField(
+                    value = codigo,
+                    onValueChange = { codigo = it },
+                    label = { Text("Código") }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = nombre,
+                    onValueChange = { nombre = it },
+                    label = { Text("Nombre") }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = descripcion,
+                    onValueChange = { descripcion = it },
+                    label = { Text("Descripción") }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = precio,
+                    onValueChange = { precio = it },
+                    label = { Text("Precio") }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = mail,
+                    onValueChange = { mail = it },
+                    label = { Text("Email") }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = {
+                    if (codigo.text.isEmpty() || nombre.text.isEmpty() || descripcion.text.isEmpty() || precio.text.isEmpty() || mail.text.isEmpty()) {
+                        mensaje = "Por favor, complete todos los campos."
+                    } else {
+                        val producto = Producto(
+                            p_codigo = codigo.text,
+                            p_nombre = nombre.text,
+                            p_descripcion = descripcion.text,
+                            p_precio = precio.text.toDoubleOrNull() ?: 0.0,
+                            p_mail_creado = mail.text
+                        )
+                        mainViewModel.crearProducto(producto) { response ->
+                            if (response.isSuccessful) {
+                                mensaje = "Producto creado exitosamente"
+                            } else {
+                                mensaje = "Error al crear producto: ${response.message()}"
+                            }
+                        }
+                    }
+                }) {
+                    Text("Crear Producto")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = mensaje, color = if (mensaje.startsWith("Error")) Color.Red else Color.Green)
+            }
         }
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-        item {
+    }
+}
+
+
+
+        /*item {
             Row(modifier = Modifier.padding(horizontal = 10.dp)) { //Row para INVERSIONES
                 Column(//Columna para separar entre titulo y contenido
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -453,6 +517,7 @@ fun ContentServicesView(navController: NavController) {
         item {
             Spacer(modifier = Modifier.height(8.dp))
         }
+
         item {
             Row(modifier = Modifier.padding(horizontal = 10.dp)) { //Row para AHORROS
                 Column(//Columna para separar entre titulo y contenido
@@ -548,4 +613,4 @@ fun ContentServicesView(navController: NavController) {
 fun ServicesViewPreview() {
     val navController = rememberNavController()
     ServicesView(navController)
-}
+}*/

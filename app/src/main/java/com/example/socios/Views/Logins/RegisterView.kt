@@ -51,6 +51,7 @@ import com.example.socios.R
 import com.example.socios.modelo.Producto
 import com.example.socios.modelo.Usuario
 import com.example.socios.modelo.UsuarioLogin
+import com.example.socios.service.ApiServicio
 import com.example.socios.util.RetrofitInstance
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,81 +59,122 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.Response
 
-class MainViewModel : ViewModel() {
-    val isLoading = mutableStateOf(false)
+class MainViewModel(private val apiService: ApiServicio = RetrofitInstance.api) : ViewModel() {
+    val isLoading = MutableStateFlow(false)
     private val _userCreationResult = MutableStateFlow<UserCreationResult?>(null)
     val userCreationResult = _userCreationResult.asStateFlow()
-
     private val _productCreationResult = MutableStateFlow<ProductCreationResult?>(null)
     val productCreationResult = _productCreationResult.asStateFlow()
+    private var currentCodigo = 0
+    val currentUser = User("user@example.com", "John Doe")
 
-    private val _productos = MutableStateFlow<List<Producto>>(emptyList())
-    val productos = _productos.asStateFlow()
-
-    fun createUser(mail: String, pass: String, nombre: String, apellido: String, navController: NavController) {
-        val usuario = Usuario(mail, pass, nombre, apellido)
-
-        viewModelScope.launch {
-            isLoading.value = true
-            val response = RetrofitInstance.api.usuarioLogin(UsuarioLogin(mail, pass))
-
-            if (response.isSuccessful) {
-                val cantidad = response.body()?.get(0)?.RESPUESTA
-                if (cantidad == "LOGIN NOK") {
-                    // El usuario no existe, podemos crearlo
-                    val createUserResponse = RetrofitInstance.api.usuarioAlmacenar(usuario)
-                    if (createUserResponse.isSuccessful) {
-                        _userCreationResult.value = UserCreationResult.Success(createUserResponse.body())
-                        // Navegar al login solo si el usuario se crea con éxito
-                        navController.navigate("Login")
-                    } else {
-                        _userCreationResult.value = UserCreationResult.Error(createUserResponse.message())
-                    }
-                } else {
-                    // El usuario ya existe, mostramos un mensaje o hacemos algo
-                    _userCreationResult.value = UserCreationResult.Error("El usuario ya existe")
-                }
-            } else {
-                _userCreationResult.value = UserCreationResult.Error(response.message())
-            }
-
-            isLoading.value = false
-            resetUserCreationResult()
-        }
-    }
+    data class User(val email: String, val nombre: String)
 
     fun usuarioLogin(mail: String, pass: String, navController: NavController) {
         val usuarioLogin = UsuarioLogin(mail, pass)
 
         viewModelScope.launch {
             isLoading.value = true
-            val response = RetrofitInstance.api.usuarioLogin(usuarioLogin)
-            println("MSV: " + (response.body()?.get(0)?.RESPUESTA ?: "0"))
+            try {
+                val response = apiService.usuarioLogin(usuarioLogin)
+                println("MSV: " + (response.body()?.get(0)?.RESPUESTA ?: "0"))
 
-            if (response.isSuccessful) {
-                val cantidad = response.body()?.get(0)?.RESPUESTA
-                if (cantidad == "LOGIN OK") {
-                    // Navegar al home solo si el inicio de sesión es exitoso
-                    navController.navigate("Home")
+                if (response.isSuccessful) {
+                    val cantidad = response.body()?.get(0)?.RESPUESTA
+                    if (cantidad == "LOGIN OK") {
+                        println("MSV: Usuario logueado")
+                        navController.navigate("Home")
+                    } else {
+                        _userCreationResult.value = UserCreationResult.Error("Credenciales Inválidas")
+                        println("MSV: Usuario no logueado")
+                    }
                 } else {
-                    // Mostrar mensaje de error si el inicio de sesión falla
-                    _userCreationResult.value = UserCreationResult.Error("Credenciales Inválidas")
+                    _userCreationResult.value = UserCreationResult.Error(response.message())
                 }
-            } else {
-                // Manejar error de conexión u otros errores de la API
-                _userCreationResult.value = UserCreationResult.Error(response.message())
+            } catch (e: Exception) {
+                _userCreationResult.value = UserCreationResult.Error(e.message ?: "Error desconocido")
+                println("MSV: Error al intentar iniciar sesión: ${e.message}")
+            } finally {
+                isLoading.value = false
+                resetUserCreationResult()
             }
-            isLoading.value = false
-            resetUserCreationResult()
         }
     }
-    fun crearProducto(producto: Producto, onResult: (Response<String>) -> Unit) {
+
+    fun createUser(mail: String, pass: String, nombre: String, apellido: String, navController: NavController) {
+        val usuario = Usuario(mail, pass, nombre, apellido)
+
         viewModelScope.launch {
             isLoading.value = true
-            val response = RetrofitInstance.api.crearProducto(producto)
-            println("Response: $response")
-            onResult(response)
-            isLoading.value = false
+            try {
+                val response = apiService.usuarioLogin(UsuarioLogin(mail, pass))
+
+                if (response.isSuccessful) {
+                    val cantidad = response.body()?.get(0)?.RESPUESTA
+                    if (cantidad == "LOGIN NOK") {
+                        val createUserResponse = apiService.usuarioAlmacenar(usuario)
+                        if (createUserResponse.isSuccessful) {
+                            _userCreationResult.value = UserCreationResult.Success(createUserResponse.body())
+                            navController.navigate("Login")
+                            println("MSV: Usuario registrado")
+                        } else {
+                            _userCreationResult.value = UserCreationResult.Error(createUserResponse.message())
+                            println("MSV: Usuario no registrado")
+                        }
+                    } else {
+                        _userCreationResult.value = UserCreationResult.Error("El usuario ya existe")
+                    }
+                } else {
+                    _userCreationResult.value = UserCreationResult.Error(response.message())
+                }
+            } catch (e: Exception) {
+                _userCreationResult.value = UserCreationResult.Error(e.message ?: "Error desconocido")
+                println("MSV: Error al intentar registrar usuario: ${e.message}")
+            } finally {
+                isLoading.value = false
+                resetUserCreationResult()
+            }
+        }
+    }
+
+    fun nextCodigo(): String {
+        currentCodigo += 1
+        return currentCodigo.toString()
+    }
+
+    fun crearProducto(precio: Int, mail: String) {
+        val codigo = nextCodigo()
+        val nombre = "Servicio de depósito a plazo"
+        val descripcion = "Este es un servicio para contratar un depósito a plazo"
+        val producto = Producto(codigo, nombre, descripcion, precio, mail)
+
+        viewModelScope.launch {
+            _productCreationResult.value = null
+            try {
+                val response = apiService.crearProducto(producto)
+
+                if (response.isSuccessful) {
+                    _productCreationResult.value = ProductCreationResult.Success
+                    println("Creando producto:")
+                    println("Código: $codigo")
+                    println("Nombre: $nombre")
+                    println("Descripción: $descripcion")
+                    println("Precio: $precio")
+                    println("Correo electrónico: $mail")
+                } else {
+                    _productCreationResult.value = ProductCreationResult.Error(response.message())
+                }
+            } catch (e: Exception) {
+                _productCreationResult.value = ProductCreationResult.Error(e.message ?: "Error desconocido")
+                println("MSV: Error al intentar crear producto: ${e.message}")
+            }
+        }
+    }
+
+    fun resetProductCreationResult() {
+        viewModelScope.launch {
+            delay(1000)
+            _productCreationResult.value = null
         }
     }
 
@@ -143,14 +185,14 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    sealed class ProductCreationResult {
-        data class Success(val message: String): ProductCreationResult()
-        data class Error(val message: String): ProductCreationResult()
-    }
-
     sealed class UserCreationResult {
         data class Success(val data: Any?): UserCreationResult()
         data class Error(val message: String): UserCreationResult()
+    }
+
+    sealed class ProductCreationResult {
+        object Success : ProductCreationResult()
+        data class Error(val message: String) : ProductCreationResult()
     }
 }
 @Composable
@@ -179,7 +221,6 @@ fun ContentRegisterView(navController: NavController) {
             is MainViewModel.UserCreationResult.Error -> {
                 Toast.makeText(context, "${result.message}", Toast.LENGTH_LONG).show()
                 println("Error al crear usuario: ${result.message}")
-                // Agregar condición para evitar la navegación al login
                 if (result.message != "El usuario ya existe") {
                     navController.navigate("Login")
                 }
@@ -206,7 +247,9 @@ fun ContentRegisterView(navController: NavController) {
     Spacer(modifier = Modifier.height(8.dp))
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 30.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 30.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -256,48 +299,67 @@ fun ContentRegisterView(navController: NavController) {
             keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done)
         )
         Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                if (mail.isNullOrEmpty() || pass.isNullOrEmpty() || nombre.isNullOrEmpty() || apellido.isNullOrEmpty()) {
-                    println("Complete todos los campos.")
-                    Toast.makeText(context, "Complete todos los campos.", Toast.LENGTH_SHORT).show()
-                } else if (mail.isNullOrEmpty()) {
-                    println("Ingrese un mail, por favor.")
-                    Toast.makeText(context, "Ingrese un mail, por favor.", Toast.LENGTH_SHORT).show()
-                } else if (pass.isNullOrEmpty()) {
-                    println("Ingrese una clave. 5 caracteres")
-                    Toast.makeText(context, "Ingrese su clave. 5 caracteres", Toast.LENGTH_SHORT).show()
-                } else if (nombre.isNullOrEmpty()) {
-                    println("Indique su nombre, por favor.")
-                    Toast.makeText(context, "Indique su nombre, por favor.", Toast.LENGTH_SHORT)
-                        .show()
-                } else if (apellido.isNullOrEmpty()) {
-                    println("Indique su apellido, por favor.")
-                    Toast.makeText(context, "Indique su apellido, por favor.", Toast.LENGTH_SHORT)
-                        .show()
-                } else if (!mail.contains("@")) {
-                    println("Correo electrónico inválido")
-                    Toast.makeText(context, "Correo electrónico inválido", Toast.LENGTH_LONG).show()
-                } else if (!validarCorreoElectronico(mail)) {
-                    println("Correo electrónico inválido")
-                    Toast.makeText(context, "Correo electrónico inválido", Toast.LENGTH_SHORT).show()
-                }else if (pass.length !=5) {
-                    println("La clave debe tener 5 caracteres.")
-                    Toast.makeText(context, "La clave debe tener 5 caracteres.", Toast.LENGTH_SHORT).show()
-                } else {
-                    // Llama a createUser pasando el NavController como parámetro
-                    viewModel.createUser(mail, pass, nombre, apellido, navController)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+            Button(
+                onClick = {
+                    if (mail.isNullOrEmpty() || pass.isNullOrEmpty() || nombre.isNullOrEmpty() || apellido.isNullOrEmpty()) {
+                        println("Complete todos los campos.")
+                        Toast.makeText(context, "Complete todos los campos.", Toast.LENGTH_SHORT).show()
+                    } else if (mail.isNullOrEmpty()) {
+                        println("Ingrese un mail, por favor.")
+                        Toast.makeText(context, "Ingrese un mail, por favor.", Toast.LENGTH_SHORT).show()
+                    } else if (pass.isNullOrEmpty()) {
+                        println("Ingrese una clave. 5 caracteres")
+                        Toast.makeText(context, "Ingrese su clave. 5 caracteres", Toast.LENGTH_SHORT).show()
+                    } else if (nombre.isNullOrEmpty()) {
+                        println("Indique su nombre, por favor.")
+                        Toast.makeText(context, "Indique su nombre, por favor.", Toast.LENGTH_SHORT)
+                            .show()
+                    } else if (apellido.isNullOrEmpty()) {
+                        println("Indique su apellido, por favor.")
+                        Toast.makeText(context, "Indique su apellido, por favor.", Toast.LENGTH_SHORT)
+                            .show()
+                    } else if (!mail.contains("@")) {
+                        println("Correo electrónico inválido")
+                        Toast.makeText(context, "Correo electrónico inválido", Toast.LENGTH_LONG).show()
+                    } else if (!validarCorreoElectronico(mail)) {
+                        println("Correo electrónico inválido")
+                        Toast.makeText(context, "Correo electrónico inválido", Toast.LENGTH_SHORT).show()
+                    }else if (pass.length !=5) {
+                        println("La clave debe tener 5 caracteres.")
+                        Toast.makeText(context, "La clave debe tener 5 caracteres.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        // Llama a createUser pasando el NavController como parámetro
+                        viewModel.createUser(mail, pass, nombre, apellido, navController)
+                    }
                 }
-            }
-            ,
-            modifier = Modifier.height(50.dp).maxWidthIn(130.dp),
-            shape = RoundedCornerShape(50.dp),
-            colors = ButtonDefaults.buttonColors(Color.Red)
+                ,
+                modifier = Modifier
+                    .height(50.dp)
+                    .maxWidthIn(130.dp),
+                shape = RoundedCornerShape(50.dp),
+                colors = ButtonDefaults.buttonColors(Color.Red)
 
-        ) {
-            Text("Crear Cuenta")
+            ) {
+                Text("Crear Cuenta")
+            }
+            Button(
+                onClick = {
+                    navController.navigate("Login")
+                }
+                ,
+                modifier = Modifier
+                    .height(50.dp)
+                    .maxWidthIn(160.dp),
+                shape = RoundedCornerShape(50.dp),
+                colors = ButtonDefaults.buttonColors(Color.Red)
+
+            ) {
+                Text("Tengo cuenta")
+            }
         }
+
+
 
         Spacer(modifier = Modifier.height(20.dp))
 

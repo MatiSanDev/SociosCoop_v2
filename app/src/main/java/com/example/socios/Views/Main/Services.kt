@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -43,9 +46,10 @@ import com.example.socios.R
 import com.example.socios.Views.Logins.MainViewModel
 import com.example.socios.modelo.Producto
 import retrofit2.Response
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun ServicesView(navController: NavController, mainViewModel: MainViewModel) {
+fun ServicesView(navController: NavController, mainViewModel: MainViewModel = viewModel()) {
     Scaffold(
         topBar = {
             MyTopAppBar(navController)
@@ -54,91 +58,85 @@ fun ServicesView(navController: NavController, mainViewModel: MainViewModel) {
             MyBottomAppBar(navController)
         }
     ) {
-        ContentServicesView(navController, mainViewModel)
+        MainView(viewModel = mainViewModel)
     }
 }
-@Composable
-fun ContentServicesView(navController: NavController, mainViewModel: MainViewModel) {
-    var codigo by remember { mutableStateOf(TextFieldValue("")) }
-    var nombre by remember { mutableStateOf(TextFieldValue("")) }
-    var descripcion by remember { mutableStateOf(TextFieldValue("")) }
-    var precio by remember { mutableStateOf(TextFieldValue("")) }
-    var mail by remember { mutableStateOf(TextFieldValue("")) }
-    var mensaje by remember { mutableStateOf("") }
 
+@Composable
+fun MainView(viewModel: MainViewModel) {
+    CrearProductoView(viewModel = viewModel)
+}
+
+@Composable
+fun CrearProductoView(viewModel: MainViewModel) {
+    var precio by remember { mutableStateOf(0) }
+    var mensaje by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    LazyColumn(
+    val currentUser = viewModel.currentUser
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(vertical = 73.dp),
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                OutlinedTextField(
-                    value = codigo,
-                    onValueChange = { codigo = it },
-                    label = { Text("Código") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
-                    label = { Text("Nombre") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = descripcion,
-                    onValueChange = { descripcion = it },
-                    label = { Text("Descripción") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = precio,
-                    onValueChange = { precio = it },
-                    label = { Text("Precio") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = mail,
-                    onValueChange = { mail = it },
-                    label = { Text("Email") }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = {
-                    if (codigo.text.isEmpty() || nombre.text.isEmpty() || descripcion.text.isEmpty() || precio.text.isEmpty() || mail.text.isEmpty()) {
-                        mensaje = "Por favor, complete todos los campos."
-                    } else {
-                        val producto = Producto(
-                            codigo = codigo.text,
-                            nombre = nombre.text,
-                            descripcion = descripcion.text,
-                            precio = precio.text.toDoubleOrNull() ?: 0.0,
-                            mail = mail.text
-                        )
-                        mainViewModel.crearProducto(producto) { response ->
-                            if (response.isSuccessful) {
-                                mensaje = "Producto creado exitosamente"
-                                println("MSV Producto Mensaje: $mensaje")
-                            } else {
-                                mensaje = "Error al crear producto: ${response.message()}"
-                            }
-                            println("MSV Producto Mensaje: $mensaje")
-                        }
-                    }
-                }) {
-                    Text("Crear Producto")
+        OutlinedTextField(
+            value = precio.toString(),
+            onValueChange = {
+                precio = it.toIntOrNull() ?: 0
+            },
+            label = { Text("Ingresa monto") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = {
+                if (!isLoading) {
+                    viewModel.crearProducto(precio, currentUser.email)
+                    isLoading = true
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = mensaje, color = if (mensaje.startsWith("Error")) Color.Red else Color.Green)
+            },
+            enabled = !isLoading
+        ) {
+            Text("Realizar deposito")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(text = mensaje)
+    }
+
+    val productCreationResult by viewModel.productCreationResult.collectAsState()
+
+    LaunchedEffect(productCreationResult) {
+        when (val result = productCreationResult) {
+            is MainViewModel.ProductCreationResult.Success -> {
+                mensaje = "Producto creado exitosamente"
+                println("Producto creado:")
+                println("Nombre: Servicio de depósito a plazo")
+                println("Descripción: Este es un servicio para contratar un depósito a plazo")
+                println("Precio: $precio")
+                println("Correo electrónico: ${currentUser.email}")
+            }
+            is MainViewModel.ProductCreationResult.Error -> {
+                mensaje = "Error al crear producto: ${result.message}"
+            }
+            null -> {
+                // No-op
             }
         }
+        isLoading = false
+        viewModel.resetProductCreationResult()
     }
+}
+
+@Preview
+@Composable
+fun ServicesViewPreview() {
+    val navController = rememberNavController()
+    ServicesView(navController)
 }
 
 

@@ -18,6 +18,6 @@ interface ApiServicio {
     suspend fun usuarioLogin(@Body usuario: UsuarioLogin): Response<List<Respuesta>>
 
     @POST("route/producto_duoc_almacenar")
-    suspend fun crearProducto(@Body producto: Producto): Response<String>
+    suspend fun crearProducto(@Body producto: Producto): Response<List<Respuesta>>
 
 }

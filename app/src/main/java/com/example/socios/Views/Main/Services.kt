@@ -1,17 +1,29 @@
 package com.example.socios.Views.Main
 
 import android.annotation.SuppressLint
+import android.widget.Toast
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,10 +35,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
@@ -58,79 +72,169 @@ fun ServicesView(navController: NavController, mainViewModel: MainViewModel = vi
             MyBottomAppBar(navController)
         }
     ) {
-        MainView(viewModel = mainViewModel)
+        CrearProducto(navController)
     }
 }
-
 @Composable
-fun MainView(viewModel: MainViewModel) {
-    CrearProductoView(viewModel = viewModel)
-}
+fun CrearProducto(navController: NavController) {
+    var codigo by remember { mutableStateOf("") }
+    var nombre by remember { mutableStateOf("") }
+    var descripcion by remember { mutableStateOf("") }
+    var precio by remember { mutableStateOf("") }
+    var precioInt by remember { mutableStateOf<Int?>(null) }
+    var mail by remember { mutableStateOf("") }
 
-@Composable
-fun CrearProductoView(viewModel: MainViewModel) {
-    var precio by remember { mutableStateOf(0) }
-    var mensaje by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
-    val currentUser = viewModel.currentUser
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        OutlinedTextField(
-            value = precio.toString(),
-            onValueChange = {
-                precio = it.toIntOrNull() ?: 0
-            },
-            label = { Text("Ingresa monto") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = {
-                if (!isLoading) {
-                    viewModel.crearProducto(precio, currentUser.email)
-                    isLoading = true
-                }
-            },
-            enabled = !isLoading
-        ) {
-            Text("Realizar deposito")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = mensaje)
-    }
-
+    val context1 = LocalContext.current
+    var viewModel: MainViewModel = viewModel()
     val productCreationResult by viewModel.productCreationResult.collectAsState()
 
     LaunchedEffect(productCreationResult) {
-        when (val result = productCreationResult) {
+        when (productCreationResult) {
             is MainViewModel.ProductCreationResult.Success -> {
-                mensaje = "Producto creado exitosamente"
-                println("Producto creado:")
-                println("Nombre: Servicio de depósito a plazo")
-                println("Descripción: Este es un servicio para contratar un depósito a plazo")
-                println("Precio: $precio")
-                println("Correo electrónico: ${currentUser.email}")
+                Toast.makeText(context1, "Solicitud exitosa", Toast.LENGTH_LONG).show()
+                viewModel.resetProductCreationResult()
+                navController.navigate("Home")
             }
             is MainViewModel.ProductCreationResult.Error -> {
-                mensaje = "Error al crear producto: ${result.message}"
+                Toast.makeText(context1, "La accion no se pudo realizar, contacte a soporte: ${(productCreationResult as MainViewModel.ProductCreationResult.Error).message}", Toast.LENGTH_LONG).show()
+                println("La accion no se pudo realizar, contacte a soporte: ${(productCreationResult as MainViewModel.ProductCreationResult.Error).message}")
             }
             null -> {
-                // No-op
+                println("PASA POR EL NULL");
             }
         }
-        isLoading = false
-        viewModel.resetProductCreationResult()
+    }
+
+
+    Surface(color = MaterialTheme.colorScheme.background) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp)
+
+        ) {
+            Row() {
+                CustomImage(
+                    painter = painterResource(id = R.drawable.peso),
+                    contentDescription = "Ahorros logo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(60.dp)
+                )
+                Spacer(modifier = Modifier.padding(horizontal = 15.dp))
+                CustomImage(
+                    painter = painterResource(id = R.drawable.usd),
+                    contentDescription = "Ahorros logo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(60.dp)
+                )
+                Spacer(modifier = Modifier.padding(horizontal = 15.dp))
+                CustomImage(
+                    painter = painterResource(id = R.drawable.uf),
+                    contentDescription = "Ahorros logo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(60.dp)
+                )
+            }
+
+            Row(modifier = Modifier.padding(horizontal = 10.dp)) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .border(
+                            width = 1.dp,
+                            color = Color.LightGray,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .fillMaxWidth()
+                ) {
+                    Row(horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+
+                            .fillMaxWidth()
+                            .border(
+                                width = 1.dp,
+                                color = Color.LightGray,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(10.dp)
+
+                    ) {
+                        CustomTextBox(
+                            text = "Deposito a plazo",
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Default,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(0.dp)
+                        )
+
+
+                    }
+                    Row( //Row de producto
+                        modifier = Modifier
+
+                            .fillMaxWidth()
+                            .padding(20.dp)
+
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CustomTextBox(
+                                text = "Deseas invertir y hacer crecer tu dinero? " +"          "+
+
+                                        "Realiza un deposito a plazo y disfruta sus beneficios.",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Light,
+                                fontFamily = FontFamily.Default,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(vertical = 10.dp)
+                            )
+                            OutlinedTextField(
+                                value = precio,
+                                onValueChange = { precio = it
+                                    precioInt = it.toIntOrNull()
+                                    if (precioInt == null && it.isNotEmpty()) {
+                                        Toast.makeText(context1, "Por favor, ingrese un monto", Toast.LENGTH_SHORT).show()}
+                                },
+                                label = { Text("Ingrese monto a depositar") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions.Default.copy(
+                                    imeAction = ImeAction.Done,
+                                    keyboardType = KeyboardType.Number
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(32.dp))
+                            Button(
+                                onClick = {
+                                    if (precioInt != null) {
+                                        viewModel.createProducto(codigo, nombre, descripcion, precioInt!!, mail)
+                                    } else {
+                                        Toast.makeText(context1, "Por favor, ingrese un monto a depositar", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(4.dp),
+                                colors = ButtonDefaults.buttonColors(Color.Red)
+
+                                ) {
+                                Text("INVERTIR")
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
+
 
 @Preview
 @Composable
@@ -141,8 +245,8 @@ fun ServicesViewPreview() {
 
 
 
-
-        /*item {
+/*
+        item {
             Row(modifier = Modifier.padding(horizontal = 10.dp)) { //Row para INVERSIONES
                 Column(//Columna para separar entre titulo y contenido
                     horizontalAlignment = Alignment.CenterHorizontally,

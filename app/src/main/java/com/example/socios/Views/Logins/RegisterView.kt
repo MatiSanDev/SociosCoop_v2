@@ -1,5 +1,6 @@
 package com.example.socios.Views.Logins
 
+import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -65,12 +66,13 @@ class MainViewModel(private val apiService: ApiServicio = RetrofitInstance.api) 
     val userCreationResult = _userCreationResult.asStateFlow()
     private val _productCreationResult = MutableStateFlow<ProductCreationResult?>(null)
     val productCreationResult = _productCreationResult.asStateFlow()
-    private var currentCodigo = 0
-    val currentUser = User("user@example.com", "John Doe")
-
-    data class User(val email: String, val nombre: String)
-
+    private var nextCodigo = 1
+    private var userEmail: String = ""
     fun usuarioLogin(mail: String, pass: String, navController: NavController) {
+        println("MSV: --------LOGIN--------")
+        println("MSV: Datos ingresados por el usuario:")
+        println("MSV: Correo electrónico: $mail")
+        println("MSV: Contraseña: $pass")
         val usuarioLogin = UsuarioLogin(mail, pass)
 
         viewModelScope.launch {
@@ -83,10 +85,13 @@ class MainViewModel(private val apiService: ApiServicio = RetrofitInstance.api) 
                     val cantidad = response.body()?.get(0)?.RESPUESTA
                     if (cantidad == "LOGIN OK") {
                         println("MSV: Usuario logueado")
+                        println("MSV: --------FIN LOGIN--------")
                         navController.navigate("Home")
+                        userEmail = mail
                     } else {
                         _userCreationResult.value = UserCreationResult.Error("Credenciales Inválidas")
                         println("MSV: Usuario no logueado")
+                        println("MSV: --------FIN LOGIN--------")
                     }
                 } else {
                     _userCreationResult.value = UserCreationResult.Error(response.message())
@@ -103,7 +108,12 @@ class MainViewModel(private val apiService: ApiServicio = RetrofitInstance.api) 
 
     fun createUser(mail: String, pass: String, nombre: String, apellido: String, navController: NavController) {
         val usuario = Usuario(mail, pass, nombre, apellido)
-
+        println("MSV: --------REGISTRO--------")
+        println("MSV: Datos ingresados por el usuario:")
+        println("MSV: Correo electrónico: $mail")
+        println("MSV: Contraseña: $pass")
+        println("MSV: Nombre: $nombre")
+        println("MSV: Apellido: $apellido")
         viewModelScope.launch {
             isLoading.value = true
             try {
@@ -117,9 +127,12 @@ class MainViewModel(private val apiService: ApiServicio = RetrofitInstance.api) 
                             _userCreationResult.value = UserCreationResult.Success(createUserResponse.body())
                             navController.navigate("Login")
                             println("MSV: Usuario registrado")
+                            println("MSV: --------FIN REGISTRO--------")
+                            userEmail = mail
                         } else {
                             _userCreationResult.value = UserCreationResult.Error(createUserResponse.message())
                             println("MSV: Usuario no registrado")
+                            println("MSV: --------FIN REGISTRO--------")
                         }
                     } else {
                         _userCreationResult.value = UserCreationResult.Error("El usuario ya existe")
@@ -137,45 +150,53 @@ class MainViewModel(private val apiService: ApiServicio = RetrofitInstance.api) 
         }
     }
 
-    fun nextCodigo(): String {
-        currentCodigo += 1
-        return currentCodigo.toString()
-    }
+    fun createProducto(codigo: String, nombre: String, descripcion: String, precio: Int, mail: String) {
 
-    fun crearProducto(precio: Int, mail: String) {
-        val codigo = nextCodigo()
-        val nombre = "Servicio de depósito a plazo"
-        val descripcion = "Este es un servicio para contratar un depósito a plazo"
+        val codigo = generateCodigo()
+        val nombre = "Deposito a plazo"
+        val descripcion = "Servicio de deposito a plazo"
+
         val producto = Producto(codigo, nombre, descripcion, precio, mail)
+        println("MSV: --------CREAR PRODUCTO--------")
+        println("MSV: Solicitando creación de producto con los siguientes datos:")
+        println("MSV: Código ${producto.codigo}")
+        println("MSV: Nombre: ${producto.nombre}")
+        println("MSV: Descripción: ${producto.descripcion}")
+        println("MSV: Precio: ${producto.precio}")
+        println("MSV: Mail: $mail")
 
         viewModelScope.launch {
-            _productCreationResult.value = null
-            try {
-                val response = apiService.crearProducto(producto)
-
-                if (response.isSuccessful) {
-                    _productCreationResult.value = ProductCreationResult.Success
-                    println("Creando producto:")
-                    println("Código: $codigo")
-                    println("Nombre: $nombre")
-                    println("Descripción: $descripcion")
-                    println("Precio: $precio")
-                    println("Correo electrónico: $mail")
-                } else {
-                    _productCreationResult.value = ProductCreationResult.Error(response.message())
-                }
-            } catch (e: Exception) {
-                _productCreationResult.value = ProductCreationResult.Error(e.message ?: "Error desconocido")
-                println("MSV: Error al intentar crear producto: ${e.message}")
+            isLoading.value = true
+            val response = apiService.crearProducto(producto)
+            if (response.isSuccessful){
+                _productCreationResult.value = ProductCreationResult.Success(response.body())
+                println("MSV: Producto creado con éxito")
+                println("MSV: --------FIN CREAR PRODUCTO--------")
+            } else {
+                _productCreationResult.value = ProductCreationResult.Error(response.message())
+                println("MSV: Producto no creado")
+                println("MSV: --------FIN CREAR PRODUCTO--------")
             }
+            isLoading.value = false
+            resetProductCreationResult()
         }
+    }
+    private fun generateCodigo(): String {
+        val codigo = "solicitud: ${String.format("%03d", nextCodigo)}"
+        nextCodigo++
+        return codigo
     }
 
     fun resetProductCreationResult() {
         viewModelScope.launch {
-            delay(1000)
+            kotlinx.coroutines.delay(1000)
             _productCreationResult.value = null
         }
+    }
+
+    sealed class ProductCreationResult{
+        data class Success(val data: Any?): ProductCreationResult()
+        data class Error(val message: String): ProductCreationResult()
     }
 
     fun resetUserCreationResult() {
@@ -188,11 +209,6 @@ class MainViewModel(private val apiService: ApiServicio = RetrofitInstance.api) 
     sealed class UserCreationResult {
         data class Success(val data: Any?): UserCreationResult()
         data class Error(val message: String): UserCreationResult()
-    }
-
-    sealed class ProductCreationResult {
-        object Success : ProductCreationResult()
-        data class Error(val message: String) : ProductCreationResult()
     }
 }
 @Composable

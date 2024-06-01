@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -58,7 +60,9 @@ import com.example.socios.Components.MyTopAppBar
 import com.example.socios.Components.TitleView
 import com.example.socios.R
 import com.example.socios.Views.Logins.MainViewModel
+import com.example.socios.bdd.BaseDatos
 import com.example.socios.modelo.Producto
+import com.example.socios.modelo.ProductoCredito
 import retrofit2.Response
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")

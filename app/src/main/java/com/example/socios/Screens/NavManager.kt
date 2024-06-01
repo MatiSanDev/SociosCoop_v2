@@ -2,6 +2,7 @@ package com.example.socios.Screens
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -11,6 +12,7 @@ import com.example.socios.Views.Logins.ForgotView
 import com.example.socios.Views.Logins.LoginView
 import com.example.socios.Views.Logins.MainViewModel
 import com.example.socios.Views.Logins.RegisterView
+import com.example.socios.Views.Main.CreditosView
 import com.example.socios.Views.Main.HomeView
 import com.example.socios.Views.Main.ProfileView
 import com.example.socios.Views.Main.ServicesView
@@ -20,12 +22,15 @@ import com.example.socios.Views.Resources.DirectionsView
 import com.example.socios.Views.Resources.NotificationsView
 import com.example.socios.Views.Resources.SearchView
 import com.example.socios.Views.Resources.SplashView
+import com.example.socios.bdd.BaseDatos
 
 
 @Composable
 fun NavManager() {
     val navController = rememberNavController()
     val messages = remember { generateDummyMessages() }
+    val context = LocalContext.current // Obtener el contexto
+    val baseDatos = remember { BaseDatos(context) }
     NavHost(navController = navController, startDestination = "Register") {
 
         //Logins
@@ -69,6 +74,9 @@ fun NavManager() {
         composable("Services") {
             ServicesView(navController, mainViewModel = viewModel())
         }
-
+        //Services
+        composable("Creditos") {
+            CreditosView(navController, baseDatos)
+        }
     }
 }

@@ -1,6 +1,5 @@
 package com.example.socios.Views.Logins
 
-import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,7 +20,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,7 +56,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import retrofit2.Response
 
 class MainViewModel(private val apiService: ApiServicio = RetrofitInstance.api) : ViewModel() {
     val isLoading = MutableStateFlow(false)
@@ -210,6 +207,7 @@ class MainViewModel(private val apiService: ApiServicio = RetrofitInstance.api) 
         data class Success(val data: Any?): UserCreationResult()
         data class Error(val message: String): UserCreationResult()
     }
+
 }
 @Composable
 fun RegisterView(navController: NavController) {

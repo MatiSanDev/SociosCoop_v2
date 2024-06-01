@@ -20,4 +20,10 @@ interface ApiServicio {
     @POST("route/producto_duoc_almacenar")
     suspend fun crearProducto(@Body producto: Producto): Response<List<Respuesta>>
 
+    @GET("route/producto_duoc_obtener")
+    suspend fun obtenerTodosLosProductos(): Response<List<Producto>>
+
+    @GET("route/producto_duoc_obtener_x_mail")
+    suspend fun obtenerProductosPorCorreo(@Query("mail") correo: String): Response<List<Producto>>
+
 }
